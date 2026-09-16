@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-REALM=${KEEPER_REALM:-keeper}
-CONTAINER=${KEEPER_CONTAINER:-keeper}
-SERVER=${KEEPER_SERVER:-http://localhost:8081}
+REALM=${ANVIL_REALM:-anvil}
+CONTAINER=${ANVIL_CONTAINER:-anvil}
+SERVER=${ANVIL_SERVER:-http://localhost:8081}
 ADMIN_USER=${KC_ADMIN_USER:-admin}
 ADMIN_PASSWORD=${KC_ADMIN_PASSWORD:-admin}
 
@@ -29,8 +29,8 @@ kc_in() {
 kc_login() {
   require_container
 
-  local attempts=${KEEPER_LOGIN_ATTEMPTS:-30}
-  local delay=${KEEPER_LOGIN_DELAY:-2}
+  local attempts=${ANVIL_LOGIN_ATTEMPTS:-30}
+  local delay=${ANVIL_LOGIN_DELAY:-2}
   local attempt=1
 
   while [ "$attempt" -le "$attempts" ]; do

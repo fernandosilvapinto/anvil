@@ -11,21 +11,21 @@
 
     Dot-source this file to make the function available:
 
-        . C:\dev\keeper\tools\Get-KeeperToken.ps1
+        . C:\dev\anvil\tools\Get-AnvilToken.ps1
 
 .EXAMPLE
-    $token = Get-KeeperToken
+    $token = Get-AnvilToken
 
 .EXAMPLE
-    $token = Get-KeeperToken -ClientId carga-web -Port 5273 -ForceLogin
+    $token = Get-AnvilToken -ClientId carga-web -Port 5273 -ForceLogin
 #>
 
-function Get-KeeperToken {
+function Get-AnvilToken {
     [CmdletBinding()]
     param(
         [string]$ClientId = "pistachio-admin",
         [int]$Port = 5173,
-        [string]$Authority = "http://keeper.localtest.me:8081/realms/keeper",
+        [string]$Authority = "http://anvil.localtest.me:8081/realms/anvil",
         [string]$Scope = "openid profile email",
         [switch]$ForceLogin
     )

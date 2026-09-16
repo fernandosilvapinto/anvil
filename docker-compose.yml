@@ -1,16 +1,16 @@
-name: keeper
+name: anvil
 
 services:
-  keeper-db:
+  anvil-db:
     image: postgres:16-alpine
-    container_name: keeper-db
+    container_name: anvil-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
     volumes:
-      - keeper-db-data:/var/lib/postgresql/data
+      - anvil-db-data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     healthcheck:
@@ -19,21 +19,21 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - keeper
+      - anvil
 
-  keeper:
+  anvil:
     image: quay.io/keycloak/keycloak:26.7
-    container_name: keeper
+    container_name: anvil
     restart: unless-stopped
     command: ["start-dev", "--http-port=8081"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keeper-db:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://anvil-db:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
-      KC_HOSTNAME: http://keeper.localtest.me:8081
+      KC_HOSTNAME: http://anvil.localtest.me:8081
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
@@ -47,19 +47,19 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      keeper-db:
+      anvil-db:
         condition: service_healthy
     networks:
-      - keeper
+      - anvil
 
   openldap:
     image: osixia/openldap:1.5.0
-    container_name: keeper-ldap
+    container_name: anvil-ldap
     profiles:
       - federation
     environment:
-      LDAP_ORGANISATION: Keeper Lab
-      LDAP_DOMAIN: keeper.local
+      LDAP_ORGANISATION: Anvil Lab
+      LDAP_DOMAIN: anvil.local
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD}
     volumes:
       - ldap-data:/var/lib/ldap
@@ -67,11 +67,11 @@ services:
     ports:
       - "1389:389"
     networks:
-      - keeper
+      - anvil
 
   phpldapadmin:
     image: osixia/phpldapadmin:0.9.0
-    container_name: keeper-ldapadmin
+    container_name: anvil-ldapadmin
     profiles:
       - federation
     environment:
@@ -82,11 +82,11 @@ services:
     depends_on:
       - openldap
     networks:
-      - keeper
+      - anvil
 
   openfga:
     image: openfga/openfga:v1.12.0
-    container_name: keeper-openfga
+    container_name: anvil-openfga
     profiles:
       - authz
     command: run
@@ -96,13 +96,13 @@ services:
       - "8084:8080"
       - "3001:3000"
     networks:
-      - keeper
+      - anvil
 
 volumes:
-  keeper-db-data:
+  anvil-db-data:
   ldap-data:
   ldap-config:
 
 networks:
-  keeper:
-    name: keeper-net
+  anvil:
+    name: anvil-net

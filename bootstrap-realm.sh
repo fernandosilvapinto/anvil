@@ -7,18 +7,18 @@ require_args 1 $# "./bootstrap-realm.sh <realm> [workforce|customers]"
 REALM=$1
 PROFILE=${2:-workforce}
 
-SMTP_HOST=${KEEPER_SMTP_HOST:-host.docker.internal}
-SMTP_PORT=${KEEPER_SMTP_PORT:-1025}
-SMTP_FROM=${KEEPER_SMTP_FROM:-keeper@keeper.local}
+SMTP_HOST=${ANVIL_SMTP_HOST:-host.docker.internal}
+SMTP_PORT=${ANVIL_SMTP_PORT:-1025}
+SMTP_FROM=${ANVIL_SMTP_FROM:-anvil@anvil.local}
 
 # The authorization code is single-use and is redeemed by the application within
 # a second or two. Sixty seconds is the value OAuth 2.1 recommends; raise it
 # through the environment only while exchanging codes by hand.
-ACCESS_CODE_LIFESPAN=${KEEPER_ACCESS_CODE_LIFESPAN:-60}
+ACCESS_CODE_LIFESPAN=${ANVIL_ACCESS_CODE_LIFESPAN:-60}
 
 case "$PROFILE" in
   workforce)
-    DISPLAY_NAME="Keeper Workforce"
+    DISPLAY_NAME="Anvil Workforce"
     REGISTRATION=false
     VERIFY_EMAIL=false
     REMEMBER_ME=false
@@ -26,7 +26,7 @@ case "$PROFILE" in
     SSO_MAX=36000
     ;;
   customers)
-    DISPLAY_NAME="Keeper Customers"
+    DISPLAY_NAME="Anvil Customers"
     REGISTRATION=false
     VERIFY_EMAIL=true
     REMEMBER_ME=true
@@ -79,5 +79,5 @@ kc update "realms/$REALM/events/config" \
 
 echo
 echo "Realm $REALM ready."
-echo "Console:   http://keeper.localtest.me:8081/admin"
-echo "Discovery: http://keeper.localtest.me:8081/realms/$REALM/.well-known/openid-configuration"
+echo "Console:   http://anvil.localtest.me:8081/admin"
+echo "Discovery: http://anvil.localtest.me:8081/realms/$REALM/.well-known/openid-configuration"

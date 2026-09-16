@@ -1,11 +1,11 @@
-# Keeper
+# Anvil
 
 Self-hosted identity provider built on Keycloak — OpenID Connect, SSO and
 role-based authorization across multiple applications.
 
 ## Overview
 
-Keeper authenticates people once and issues tokens that every application
+Anvil authenticates people once and issues tokens that every application
 accepts, so applications no longer store credentials, sign their own tokens, or
 implement login flows. One sign-in serves them all.
 
@@ -26,12 +26,12 @@ registration, not a change to this repository.
 
 | Service | Port | Role | Profile |
 |---|---|---|---|
-| `keeper` | 8081 | Identity provider and authorization server | default |
-| `keeper` (management) | 9000 | `/health` and `/metrics` | default |
-| `keeper-db` | 5433 | Dedicated PostgreSQL instance | default |
-| `keeper-ldap` | 1389 | LDAP directory for user federation | `federation` |
-| `keeper-ldapadmin` | 8083 | LDAP web interface | `federation` |
-| `keeper-openfga` | 8084 / 3001 | Relationship-based authorization engine | `authz` |
+| `anvil` | 8081 | Identity provider and authorization server | default |
+| `anvil` (management) | 9000 | `/health` and `/metrics` | default |
+| `anvil-db` | 5433 | Dedicated PostgreSQL instance | default |
+| `anvil-ldap` | 1389 | LDAP directory for user federation | `federation` |
+| `anvil-ldapadmin` | 8083 | LDAP web interface | `federation` |
+| `anvil-openfga` | 8084 / 3001 | Relationship-based authorization engine | `authz` |
 
 The management port is separate from the HTTP port by design and is not meant
 to be exposed alongside it.
@@ -51,10 +51,10 @@ Copy `.env.example` to `.env`, then:
 docker compose up -d
 ```
 
-Administration console: http://keeper.localtest.me:8081/admin
+Administration console: http://anvil.localtest.me:8081/admin
 
 `localtest.me` and its subdomains resolve to 127.0.0.1 over public DNS. If the
-local network blocks that resolution, add `127.0.0.1 keeper.localtest.me` to the
+local network blocks that resolution, add `127.0.0.1 anvil.localtest.me` to the
 system hosts file.
 
 Optional profiles:
@@ -101,7 +101,7 @@ application-specific data.
 ./export-realm.sh             <realm> [output-dir]
 ```
 
-Every script but the first acts on the realm named in `KEEPER_REALM`, so an
+Every script but the first acts on the realm named in `ANVIL_REALM`, so an
 application registers itself in one realm or the other by exporting it.
 
 `bootstrap-realm.sh` creates or updates a realm and applies a profile: sign-in
@@ -142,7 +142,7 @@ call these scripts. This repository never learns their names.
 Verify a realm is serving metadata:
 
 ```
-curl -s http://keeper.localtest.me:8081/realms/workforce/.well-known/openid-configuration
+curl -s http://anvil.localtest.me:8081/realms/workforce/.well-known/openid-configuration
 ```
 
 ## Documentation
