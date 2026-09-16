@@ -27,7 +27,7 @@ case "$PROFILE" in
     ;;
   customers)
     DISPLAY_NAME="Keeper Customers"
-    REGISTRATION=true
+    REGISTRATION=false
     VERIFY_EMAIL=true
     REMEMBER_ME=true
     SSO_IDLE=86400
