@@ -85,20 +85,57 @@ validates two issuers and accepts a token from either.
 ./bootstrap-realm.sh customers customers
 ```
 
+### Organizations (multi-tenant back office)
+
+`workforce` is shared by every client business — Pistachio is one identity
+provider serving many tenants, not one deployment per tenant. Keycloak
+Organizations is what tells a manager's token which business they belong to:
+each client business is one organization, and **its alias is always identical
+to the tenant slug the API already uses for Row-Level Security** (`demo`,
+`oficina-silva`, ...). That equality is the whole integration; the API reads
+the claim and matches it straight against the slug it already knows, no
+translation table involved.
+
+A back office asks for the claim by listing `organization` among its default
+scopes when it registers — Pistachio's `register.sh` runs
+`register-spa.sh pistachio-admin <origin> pistachio-api,organization` — so a
+client recreated from scratch gets it too. From then on every access token that
+client is issued carries:
+
+```json
+"organization": ["<slug>"]
+```
+
+a JSON array of aliases, one per organization the user belongs to, and always
+an array, even with a single entry (the mapper is `multivalued`). The
+`organization` scope also appears in the token's `scope` claim. This is the
+shape with the built-in mapper's defaults; turning on "Add organization id" or
+"Add organization attributes" on the mapper changes it to an object keyed by
+alias, so leave those off unless the API is changed to match. Keep
+every manager in exactly one organization — Keycloak has open bugs around the
+claim when a user belongs to more than one (see e.g. keycloak/keycloak#33556
+and #43635), and this system has no use for a manager spanning tenants.
+
+`create-organization.sh` is the one script from this section meant to be run
+repeatedly, once per new client business.
+
 ## Scripts
 
-Seven scripts, split by responsibility. The first builds a realm; the rest are
+Nine scripts, split by responsibility. The first builds a realm; the rest are
 parameterized operations that any application can call. None of them contains
-application-specific data.
+application-specific data — the arguments do, and they are never hard-coded
+here.
 
 ```
-./bootstrap-realm.sh          <realm> [workforce|customers]
-./register-api.sh             <api-id> <permission,permission,...>
-./register-spa.sh             <client-id> <origin> <api-id,api-id,...>
-./register-role.sh            <role> <api-id>:<permission>,... [default]
-./register-service-client.sh  <client-id> <realm-management-role,...> [secret]
-./set-realm-theme.sh          <realm> <login-theme> [account] [email]
-./export-realm.sh             <realm> [output-dir]
+./bootstrap-realm.sh              <realm> [workforce|customers]
+./register-api.sh                 <api-id> <permission,permission,...>
+./register-spa.sh                 <client-id> <origin> <scope,scope,...>
+./register-role.sh                <role> <api-id>:<permission>,... [default]
+./register-service-client.sh      <client-id> <realm-management-role,...> [secret]
+./register-organization-scope.sh  <client-id>
+./create-organization.sh          <alias> <name> <manager-email>
+./set-realm-theme.sh              <realm> <login-theme> [account] [email]
+./export-realm.sh                 <realm> [output-dir]
 ```
 
 Every script but the first acts on the realm named in `ANVIL_REALM`, so an
@@ -114,8 +151,10 @@ roles, and creates the client scope whose audience mapper puts the API into the
 `aud` claim.
 
 `register-spa.sh` registers a browser application as a public client with PKCE
-enforced, sets its redirect URIs and web origin, and attaches the audiences it
-needs.
+enforced, sets its redirect URIs and web origin, and links the client scopes it
+needs as default scopes: the audience of each API it calls and, for a back
+office, `organization`. Each link is verified, and the script stops if one did
+not take.
 
 `register-role.sh` creates a business role as a composite of permissions drawn
 from one or more resource servers.
@@ -126,6 +165,23 @@ creating an account on a visitor's behalf, for instance. Grant it the narrowest
 set of realm management roles the task needs, and keep its secret out of source
 control.
 
+`register-organization-scope.sh` makes the built-in `organization` client
+scope a *default* scope of the given client, so every access token it is
+issued carries the `organization` claim without the application having to ask
+for it — the same thing `register-spa.sh` does when `organization` is in its
+scope list, for a client that is already registered. Keycloak links that scope
+to every client as *optional* when organizations are enabled, and a scope
+cannot be both; the optional link is removed first. Sessions that started before the change keep their old
+scopes on refresh, so users have to log out and back in to get the claim. Requires organizations to already be enabled on the realm — see
+"Organizations" below.
+
+`create-organization.sh` onboards one tenant: creates the organization (alias
+== tenant slug), creates or reuses the manager's account, grants
+`pistachio-manager`, and adds them as a member. Run it once per client
+business. The temporary password it prints is shown once, must change on
+first login, and should travel out of band, never in source control or in
+this terminal's scrollback.
+
 `set-realm-theme.sh` points a realm at a login, account or email theme, so a
 customer-facing realm can carry the application's branding while the provider
 remains the only thing that ever sees a password.
@@ -133,8 +189,8 @@ remains the only thing that ever sees a password.
 `export-realm.sh` writes the realm's configuration to `realms/<realm>.json`.
 
 The registration scripts are idempotent. `register-spa.sh` refuses to register an
-application against an API that does not exist, so no client is left without an
-audience.
+application against a client scope that does not exist, so no client is left
+without an audience or without its `organization` claim.
 
 Applications keep their own registration definition in their own repository and
 call these scripts. This repository never learns their names.

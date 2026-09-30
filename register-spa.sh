@@ -2,11 +2,11 @@
 set -euo pipefail
 source "$(dirname "$0")/lib/common.sh"
 
-require_args 3 $# "./register-spa.sh <client-id> <origin> <api-id,api-id,...>"
+require_args 3 $# "./register-spa.sh <client-id> <origin> <scope,scope,...>"
 
 CLIENT_ID=$1
 ORIGIN=${2%/}
-APIS=$3
+SCOPES=$3
 
 kc_login
 
@@ -62,15 +62,23 @@ fi
 
 CLIENT_UUID=$(client_uuid "$CLIENT_ID")
 
-echo "==> Audiences"
-while read -r api; do
-  SCOPE_UUID=$(scope_uuid "$api")
+# Every scope listed is linked as a default scope: the audience of each API the
+# application calls and, for a back office in the workforce realm,
+# "organization" — so the token says which business the user belongs to. Each
+# link is verified; the script stops if one did not take.
+echo "==> Default scopes"
+while read -r scope; do
+  SCOPE_UUID=$(scope_uuid "$scope")
   if [ -z "$SCOPE_UUID" ]; then
-    echo "    $api does not exist. Run ./register-api.sh $api first" >&2
+    echo "    client scope '$scope' does not exist in realm '$REALM'." >&2
+    echo "    An API: ./register-api.sh $scope   organization: ./bootstrap-realm.sh $REALM workforce" >&2
     exit 1
   fi
-  kc update "clients/$CLIENT_UUID/default-client-scopes/$SCOPE_UUID" -r "$REALM"
-  echo "    $api"
-done < <(split_list "$APIS")
+  if ! attach_default_scope "$CLIENT_UUID" "$SCOPE_UUID"; then
+    echo "    '$scope' could not be made a default scope of $CLIENT_ID" >&2
+    exit 1
+  fi
+  echo "    $scope"
+done < <(split_list "$SCOPES")
 
 echo "Application $CLIENT_ID ready."

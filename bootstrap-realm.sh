@@ -77,6 +77,35 @@ kc update "realms/$REALM/events/config" \
   -s adminEventsDetailsEnabled=true \
   -s 'enabledEventTypes=["LOGIN","LOGIN_ERROR","LOGOUT","REGISTER","REGISTER_ERROR","CODE_TO_TOKEN","CODE_TO_TOKEN_ERROR","REFRESH_TOKEN","REFRESH_TOKEN_ERROR","CLIENT_LOGIN","CLIENT_LOGIN_ERROR","UPDATE_PASSWORD","RESET_PASSWORD","SEND_RESET_PASSWORD","VERIFY_EMAIL"]'
 
+if [ "$PROFILE" = "workforce" ]; then
+  echo "==> Organizations (multi-tenant)"
+  kc update "realms/$REALM" -s organizationsEnabled=true
+
+  # Enabling the feature makes Keycloak create the built-in "organization"
+  # client scope and link it to every client as optional. This block is only
+  # a fallback in case that scope is missing. Safe to run again: skipped once
+  # the scope exists. Making it a default scope of a given client is done by
+  # register-organization-scope.sh.
+  if [ -z "$(scope_uuid organization)" ]; then
+    kc create client-scopes -r "$REALM" \
+      -s name=organization \
+      -s protocol=openid-connect \
+      -s 'attributes={"include.in.token.scope":"true","display.on.consent.screen":"false"}'
+
+    ORG_SCOPE_UUID=$(scope_uuid organization)
+
+    kc create "client-scopes/$ORG_SCOPE_UUID/protocol-mappers/models" -r "$REALM" \
+      -s name=organization \
+      -s protocol=openid-connect \
+      -s protocolMapper=oidc-organization-membership-mapper \
+      -s 'config={"claim.name":"organization","access.token.claim":"true","id.token.claim":"true","userinfo.token.claim":"true","introspection.token.claim":"true","multivalued":"true","addOrganizationAttributes":"false","addOrganizationId":"false","addOrganizationDomain":"false","jsonType.label":"String"}'
+
+    echo "    client scope 'organization' created"
+  else
+    echo "    client scope 'organization' already exists, kept"
+  fi
+fi
+
 echo
 echo "Realm $REALM ready."
 echo "Console:   http://anvil.localtest.me:8081/admin"
