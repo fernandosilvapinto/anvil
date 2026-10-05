@@ -32,6 +32,20 @@ for api in $APIS; do
     kc add-roles -r "$REALM" --rname "$ROLE" --cclientid "$api" "${ARGS[@]}"
     echo "    $api -> ${#ARGS[@]} permissions"
   fi
+
+  # Keep the role in sync with the catalog: permissions of this API that the
+  # role still carries but are no longer granted are removed. Other clients'
+  # permissions on the role are left alone.
+  wanted=$(split_list "$GRANTS" | awk -F: -v a="$api" '$1==a {print substr($0, length(a)+2)}' | sort -u)
+  api_uuid=$(client_uuid "$api")
+  current=$(kc get "roles/$ROLE/composites/clients/$api_uuid" -r "$REALM" --fields name --format csv --noquotes | tr -d '\r' | sort -u)
+  stale=$(comm -23 <(printf '%s\n' "$current" | sed '/^$/d') <(printf '%s\n' "$wanted" | sed '/^$/d'))
+  if [ -n "$stale" ]; then
+    RM=()
+    while read -r name; do RM+=(--rolename "$name"); done <<< "$stale"
+    kc remove-roles -r "$REALM" --rname "$ROLE" --cclientid "$api" "${RM[@]}"
+    echo "    $api -> removed $(wc -l <<< "$stale") stale permission(s): $(tr '\n' ' ' <<< "$stale")"
+  fi
 done
 
 if [ "$AS_DEFAULT" = "default" ]; then
